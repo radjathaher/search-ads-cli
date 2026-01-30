@@ -25,6 +25,15 @@ use proto_json::{dynamic_from_value, dynamic_to_value};
 async fn main() {
     if let Err(err) = run().await {
         eprintln!("error: {err}");
+        for (idx, cause) in err.chain().skip(1).enumerate() {
+            eprintln!("  caused by[{idx}]: {cause}");
+        }
+        if let Some(transport) = err.downcast_ref::<tonic::transport::Error>() {
+            eprintln!("transport debug: {transport:?}");
+        }
+        if let Some(status) = err.downcast_ref::<tonic::Status>() {
+            eprintln!("grpc status: {status:?}");
+        }
         std::process::exit(1);
     }
 }

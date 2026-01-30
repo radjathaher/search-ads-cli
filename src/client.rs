@@ -4,7 +4,7 @@ use prost::Message;
 use prost_reflect::{DynamicMessage, MessageDescriptor, MethodDescriptor};
 use tonic::codec::{Codec, DecodeBuf, Decoder, EncodeBuf, Encoder};
 use tonic::metadata::MetadataValue;
-use tonic::transport::{Channel, Endpoint};
+use tonic::transport::{Channel, ClientTlsConfig, Endpoint};
 use tonic::{Request, Status};
 
 pub struct AdsClient {
@@ -24,7 +24,12 @@ impl AdsClient {
         timeout: Option<std::time::Duration>,
     ) -> Result<Self> {
         let endpoint = normalize_endpoint(endpoint)?;
-        let mut builder = Endpoint::from_shared(endpoint)?;
+        let mut builder = Endpoint::from_shared(endpoint.clone())?;
+        if endpoint.starts_with("https://") {
+            builder = builder
+                .tls_config(ClientTlsConfig::new().with_webpki_roots())
+                .map_err(|err| anyhow!("tls config error: {err}"))?;
+        }
         if let Some(timeout) = timeout {
             builder = builder.timeout(timeout);
         }
@@ -42,6 +47,9 @@ impl AdsClient {
         let path = method_path(method);
         let codec = DynamicCodec::new(method.input(), method.output());
         let mut grpc = tonic::client::Grpc::new(self.channel.clone());
+        grpc.ready()
+            .await
+            .map_err(|err| anyhow!("grpc not ready: {err}"))?;
         let request = self.build_request(message)?;
         let response = grpc.unary(request, path, codec).await?;
         Ok(response.into_inner())
@@ -51,6 +59,9 @@ impl AdsClient {
         let path = method_path(method);
         let codec = DynamicCodec::new(method.input(), method.output());
         let mut grpc = tonic::client::Grpc::new(self.channel.clone());
+        grpc.ready()
+            .await
+            .map_err(|err| anyhow!("grpc not ready: {err}"))?;
         let request = self.build_request(message)?;
         let mut stream = grpc.server_streaming(request, path, codec).await?.into_inner();
 
@@ -69,6 +80,9 @@ impl AdsClient {
         let path = method_path(method);
         let codec = DynamicCodec::new(method.input(), method.output());
         let mut grpc = tonic::client::Grpc::new(self.channel.clone());
+        grpc.ready()
+            .await
+            .map_err(|err| anyhow!("grpc not ready: {err}"))?;
         let request = self.build_request(message)?;
         let response = grpc.server_streaming(request, path, codec).await?;
         Ok(response.into_inner())
