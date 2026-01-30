@@ -30,7 +30,7 @@ def copy_tree(src: Path, dst: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", default="schemas", help="output dir for proto tree")
-    parser.add_argument("--version", default="v19", help="Google Ads API version (e.g. v19)")
+    parser.add_argument("--version", default="v23", help="Google Ads API version (e.g. v23)")
     args = parser.parse_args()
 
     out_dir = Path(args.out).resolve()
